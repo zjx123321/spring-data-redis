@@ -23,7 +23,9 @@ import java.time.LocalTime;
 import java.time.Period;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -160,4 +162,9 @@ public class ConversionTestEntities {
 		int length;
 	}
 
+	static class TypeWithObjectValueTypes {
+		Object object;
+		Map<String, Object> map = new HashMap<String, Object>();
+		List<Object> list = new ArrayList<Object>();
+	}
 }
