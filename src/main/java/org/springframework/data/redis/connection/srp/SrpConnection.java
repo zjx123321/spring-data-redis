@@ -2841,4 +2841,13 @@ public class SrpConnection extends AbstractRedisConnection {
 		throw new UnsupportedOperationException();
 	}
 
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.data.redis.connection.RedisStringCommands#bitfield(byte[], BitfieldCommand)
+	 */
+	@Override
+	public List<Long> bitfield(byte[] key, BitfieldCommand command) {
+		throw new UnsupportedOperationException();
+	}
 }

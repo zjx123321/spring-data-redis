@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 the original author or authors.
+ * Copyright 2011-2016 the original author or authors.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisStringCommands;
 
 /**
  * Default implementation of {@link ValueOperations}.
@@ -268,5 +269,20 @@ class DefaultValueOperations<K, V> extends AbstractOperations<K, V> implements V
 			}
 		}, true);
 	}
-	
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.data.redis.core.ValueOperations#bitfield(Object, RedisStringCommands.BitfieldCommand)
+	 */
+	@Override
+	public List<Long> bitfield(K key, final RedisStringCommands.BitfieldCommand command) {
+
+		final byte[] rawKey = rawKey(key);
+		return execute(new RedisCallback<List<Long>>() {
+
+			public List<Long> doInRedis(RedisConnection connection) {
+				return connection.bitfield(rawKey, command);
+			}
+		}, true);
+	}
 }

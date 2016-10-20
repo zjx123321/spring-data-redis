@@ -983,5 +983,10 @@ public class RedisConnectionUnitTests {
 		public void set(byte[] key, byte[] value, Expiration expiration, SetOption options) {
 			delegate.set(key, value, expiration, options);
 		}
+
+		@Override
+		public List<Long> bitfield(byte[] key, BitfieldCommand operation) {
+			return delegate.bitfield(key, operation);
+		}
 	}
 }

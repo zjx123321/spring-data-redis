@@ -1,5 +1,5 @@
 /*
- * Copyright 2011-2014 the original author or authors.
+ * Copyright 2011-2016 the original author or authors.
  * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
+import org.springframework.data.redis.connection.RedisStringCommands;
 
 /**
  * Redis operations for simple (or in Redis terminology 'string') values.
@@ -66,7 +68,7 @@ public interface ValueOperations<K, V> {
 	Long size(K key);
 
 	RedisOperations<K, V> getOperations();
-	
+
 	/**
 	 * @since 1.5
 	 * @param key
@@ -75,7 +77,7 @@ public interface ValueOperations<K, V> {
 	 * @return
 	 */
 	Boolean setBit(K key, long offset, boolean value);
-	
+
 	/**
 	 * @since 1.5
 	 * @param key
@@ -83,5 +85,16 @@ public interface ValueOperations<K, V> {
 	 * @return
 	 */
 	Boolean getBit(K key, long offset);
-	
+
+	/**
+	 * Get / Manipulate specific integer fields of varying bit widths and arbitrary non (necessary) aligned offset stored
+	 * at a given {@code key}.
+	 *
+	 * @param key must not be {@literal null}.
+	 * @param command must not be {@literal null}.
+	 * @return
+	 * @since 1.8
+	 */
+	List<Long> bitfield(K key, RedisStringCommands.BitfieldCommand command);
+
 }

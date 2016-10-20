@@ -74,6 +74,7 @@ import org.springframework.util.ClassUtils;
 import org.springframework.util.ObjectUtils;
 
 import com.lambdaworks.redis.AbstractRedisClient;
+import com.lambdaworks.redis.BitFieldArgs;
 import com.lambdaworks.redis.GeoArgs;
 import com.lambdaworks.redis.GeoCoordinates;
 import com.lambdaworks.redis.GeoWithin;
@@ -124,7 +125,7 @@ import com.lambdaworks.redis.sentinel.api.StatefulRedisSentinelConnection;
 /**
  * {@code RedisConnection} implementation on top of <a href="https://github.com/mp911de/lettuce">Lettuce</a> Redis
  * client.
- * 
+ *
  * @author Costin Leau
  * @author Jennifer Hickey
  * @author Christoph Strobl
@@ -158,12 +159,15 @@ public class LettuceConnection extends AbstractRedisConnection {
 	private AbstractRedisClient client;
 	private volatile LettuceSubscription subscription;
 	private LettucePool pool;
-	/** flag indicating whether the connection needs to be dropped or not */
+	/**
+	 * flag indicating whether the connection needs to be dropped or not
+	 */
 	private boolean broken = false;
 	private boolean convertPipelineAndTxResults = true;
 
 	@SuppressWarnings("rawtypes")
 	private class LettuceResult extends FutureResult<com.lambdaworks.redis.protocol.RedisCommand<?, ?, ?>> {
+
 		public <T> LettuceResult(Future<T> resultHolder, Converter<T, ?> converter) {
 			super((com.lambdaworks.redis.protocol.RedisCommand) resultHolder, converter);
 		}
@@ -187,6 +191,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	private class LettuceStatusResult extends LettuceResult {
+
 		@SuppressWarnings("rawtypes")
 		public LettuceStatusResult(Future resultHolder) {
 			super(resultHolder);
@@ -195,6 +200,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	private class LettuceTxResult extends FutureResult<Object> {
+
 		public LettuceTxResult(Object resultHolder, Converter<?, ?> converter) {
 			super(resultHolder, converter);
 		}
@@ -214,6 +220,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	private class LettuceTxStatusResult extends LettuceTxResult {
+
 		public LettuceTxStatusResult(Object resultHolder) {
 			super(resultHolder);
 			setStatus(true);
@@ -221,8 +228,9 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	private class LettuceTransactionResultConverter<T> extends TransactionResultConverter<T> {
+
 		public LettuceTransactionResultConverter(Queue<FutureResult<T>> txResults,
-				Converter<Exception, DataAccessException> exceptionConverter) {
+												 Converter<Exception, DataAccessException> exceptionConverter) {
 			super(txResults, exceptionConverter);
 		}
 
@@ -237,13 +245,14 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	private class LettuceEvalResultsConverter<T> implements Converter<Object, T> {
+
 		private ReturnType returnType;
 
 		public LettuceEvalResultsConverter(ReturnType returnType) {
 			this.returnType = returnType;
 		}
 
-		@SuppressWarnings({ "rawtypes", "unchecked" })
+		@SuppressWarnings({"rawtypes", "unchecked"})
 		public T convert(Object source) {
 			if (returnType == ReturnType.MULTI) {
 				List resultList = (List) source;
@@ -259,7 +268,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 	/**
 	 * Instantiates a new lettuce connection.
-	 * 
+	 *
 	 * @param timeout The connection timeout (in milliseconds)
 	 * @param client The {@link RedisClient} to use when instantiating a native connection
 	 */
@@ -269,9 +278,9 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 	/**
 	 * Instantiates a new lettuce connection.
-	 * 
+	 *
 	 * @param timeout The connection timeout (in milliseconds) * @param client The {@link RedisClient} to use when
-	 *          instantiating a pub/sub connection
+	 * instantiating a pub/sub connection
 	 * @param pool The connection pool to use for all other native connections
 	 */
 	public LettuceConnection(long timeout, RedisClient client, LettucePool pool) {
@@ -280,9 +289,9 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 	/**
 	 * Instantiates a new lettuce connection.
-	 * 
+	 *
 	 * @param sharedConnection A native connection that is shared with other {@link LettuceConnection}s. Will not be used
-	 *          for transactions or blocking operations
+	 * for transactions or blocking operations
 	 * @param timeout The connection timeout (in milliseconds)
 	 * @param client The {@link RedisClient} to use when making pub/sub, blocking, and tx connections
 	 */
@@ -292,22 +301,22 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 	/**
 	 * Instantiates a new lettuce connection.
-	 * 
+	 *
 	 * @param sharedConnection A native connection that is shared with other {@link LettuceConnection}s. Should not be
-	 *          used for transactions or blocking operations
+	 * used for transactions or blocking operations
 	 * @param timeout The connection timeout (in milliseconds)
 	 * @param client The {@link RedisClient} to use when making pub/sub connections
 	 * @param pool The connection pool to use for blocking and tx operations
 	 */
 	public LettuceConnection(StatefulRedisConnection<byte[], byte[]> sharedConnection, long timeout, RedisClient client,
-			LettucePool pool) {
+							 LettucePool pool) {
 
 		this(sharedConnection, timeout, client, pool, 0);
 	}
 
 	/**
 	 * @param sharedConnection A native connection that is shared with other {@link LettuceConnection}s. Should not be
-	 *          used for transactions or blocking operations
+	 * used for transactions or blocking operations
 	 * @param timeout The connection timeout (in milliseconds)
 	 * @param client The {@link RedisClient} to use when making pub/sub connections.
 	 * @param pool The connection pool to use for blocking and tx operations.
@@ -315,7 +324,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 	 * @since 1.7
 	 */
 	public LettuceConnection(StatefulRedisConnection<byte[], byte[]> sharedConnection, long timeout,
-			AbstractRedisClient client, LettucePool pool, int defaultDbIndex) {
+							 AbstractRedisClient client, LettucePool pool, int defaultDbIndex) {
 
 		this.asyncSharedConn = sharedConnection;
 		this.timeout = timeout;
@@ -335,7 +344,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 		return exception;
 	}
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	private Object await(RedisFuture<?> cmd) {
 
 		if (isMulti) {
@@ -352,14 +361,14 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 	/**
 	 * 'Native' or 'raw' execution of the given command along-side the given arguments.
-	 * 
-	 * @see RedisCommands#execute(String, byte[]...)
+	 *
 	 * @param command Command to execute
 	 * @param commandOutputTypeHint Type of Output to use, may be (may be {@literal null}).
 	 * @param args Possible command arguments (may be {@literal null})
 	 * @return execution result.
+	 * @see RedisCommands#execute(String, byte[]...)
 	 */
-	@SuppressWarnings({ "rawtypes", "unchecked" })
+	@SuppressWarnings({"rawtypes", "unchecked"})
 	public Object execute(String command, CommandOutput commandOutputTypeHint, byte[]... args) {
 
 		Assert.hasText(command, "a valid command needs to be specified");
@@ -405,7 +414,6 @@ public class LettuceConnection extends AbstractRedisConnection {
 				pool.returnBrokenResource(this.asyncDedicatedConn);
 			}
 			this.asyncDedicatedConn = null;
-
 		} else {
 
 			try {
@@ -854,7 +862,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 		}
 	}
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
+	@SuppressWarnings({"unchecked", "rawtypes"})
 	public List<Object> exec() {
 		isMulti = false;
 		try {
@@ -878,16 +886,16 @@ public class LettuceConnection extends AbstractRedisConnection {
 	public Boolean exists(byte[] key) {
 		try {
 			if (isPipelined()) {
-				pipeline(new LettuceResult(getAsyncConnection().exists(new byte[][] { key }),
+				pipeline(new LettuceResult(getAsyncConnection().exists(new byte[][]{key}),
 						LettuceConverters.longToBooleanConverter()));
 				return null;
 			}
 			if (isQueueing()) {
-				transaction(new LettuceResult(getAsyncConnection().exists(new byte[][] { key }),
+				transaction(new LettuceResult(getAsyncConnection().exists(new byte[][]{key}),
 						LettuceConverters.longToBooleanConverter()));
 				return null;
 			}
-			return LettuceConverters.longToBooleanConverter().convert(getConnection().exists(new byte[][] { key }));
+			return LettuceConverters.longToBooleanConverter().convert(getConnection().exists(new byte[][]{key}));
 		} catch (Exception ex) {
 			throw convertLettuceAccessException(ex);
 		}
@@ -1431,8 +1439,8 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	/**
-	 * @since 1.3
 	 * @see org.springframework.data.redis.connection.RedisStringCommands#pSetEx(byte[], long, byte[])
+	 * @since 1.3
 	 */
 	@Override
 	public void pSetEx(byte[] key, long milliseconds, byte[] value) {
@@ -3174,7 +3182,6 @@ public class LettuceConnection extends AbstractRedisConnection {
 		try {
 			subscription = new LettuceSubscription(listener, switchToPubSub());
 			subscription.subscribe(channels);
-
 		} catch (Exception ex) {
 			throw convertLettuceAccessException(ex);
 		}
@@ -3509,7 +3516,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 	 */
 	@Override
 	public GeoResults<GeoLocation<byte[]>> geoRadiusByMember(byte[] key, byte[] member, Distance radius,
-			GeoRadiusCommandArgs args) {
+															 GeoRadiusCommandArgs args) {
 
 		Assert.notNull(key, "Key must not be null!");
 		Assert.notNull(member, "Member must not be null!");
@@ -3689,8 +3696,8 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	/**
-	 * @since 1.4
 	 * @return
+	 * @since 1.4
 	 */
 	public Cursor<byte[]> scan() {
 		return scan(0, ScanOptions.NONE);
@@ -3705,10 +3712,10 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	/**
-	 * @since 1.4
 	 * @param cursorId
 	 * @param options
 	 * @return
+	 * @since 1.4
 	 */
 	public Cursor<byte[]> scan(long cursorId, ScanOptions options) {
 
@@ -3736,9 +3743,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 			protected void doClose() {
 				LettuceConnection.this.close();
 			}
-
 		}.open();
-
 	}
 
 	/* (non-Javadoc)
@@ -3750,11 +3755,11 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	/**
-	 * @since 1.4
 	 * @param key
 	 * @param cursorId
 	 * @param options
 	 * @return
+	 * @since 1.4
 	 */
 	public Cursor<Entry<byte[], byte[]>> hScan(byte[] key, long cursorId, ScanOptions options) {
 
@@ -3780,7 +3785,6 @@ public class LettuceConnection extends AbstractRedisConnection {
 			protected void doClose() {
 				LettuceConnection.this.close();
 			}
-
 		}.open();
 	}
 
@@ -3794,11 +3798,11 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	/**
-	 * @since 1.4
 	 * @param key
 	 * @param cursorId
 	 * @param options
 	 * @return
+	 * @since 1.4
 	 */
 	public Cursor<byte[]> sScan(byte[] key, long cursorId, ScanOptions options) {
 
@@ -3824,7 +3828,6 @@ public class LettuceConnection extends AbstractRedisConnection {
 			protected void doClose() {
 				LettuceConnection.this.close();
 			}
-
 		}.open();
 	}
 
@@ -3838,11 +3841,11 @@ public class LettuceConnection extends AbstractRedisConnection {
 	}
 
 	/**
-	 * @since 1.4
 	 * @param key
 	 * @param cursorId
 	 * @param options
 	 * @return
+	 * @since 1.4
 	 */
 	public Cursor<Tuple> zScan(byte[] key, long cursorId, ScanOptions options) {
 
@@ -3870,7 +3873,6 @@ public class LettuceConnection extends AbstractRedisConnection {
 			protected void doClose() {
 				LettuceConnection.this.close();
 			}
-
 		}.open();
 	}
 
@@ -3888,7 +3890,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 	/**
 	 * Specifies if pipelined and transaction results should be converted to the expected data type. If false, results of
 	 * {@link #closePipeline()} and {@link #exec()} will be of the type returned by the Lettuce driver
-	 * 
+	 *
 	 * @param convertPipelineAndTxResults Whether or not to convert pipeline and tx results
 	 */
 	public void setConvertPipelineAndTxResults(boolean convertPipelineAndTxResults) {
@@ -3996,7 +3998,6 @@ public class LettuceConnection extends AbstractRedisConnection {
 					((StatefulRedisConnection<byte[], byte[]>) asyncDedicatedConn).sync().select(dbIndex);
 				}
 			}
-
 		}
 
 		if (asyncDedicatedConn instanceof StatefulRedisConnection) {
@@ -4161,7 +4162,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 	/**
 	 * {@link TypeHints} provide {@link CommandOutput} information for a given {@link CommandType}.
-	 * 
+	 *
 	 * @since 1.2.1
 	 */
 	static class TypeHints {
@@ -4322,7 +4323,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 		/**
 		 * Returns the {@link CommandOutput} mapped for given {@link CommandType} or {@link ByteArrayOutput} as default.
-		 * 
+		 *
 		 * @param type
 		 * @return {@link ByteArrayOutput} as default when no matching {@link CommandOutput} available.
 		 */
@@ -4333,7 +4334,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 
 		/**
 		 * Returns the {@link CommandOutput} mapped for given {@link CommandType} given {@link CommandOutput} as default.
-		 * 
+		 *
 		 * @param type
 		 * @return
 		 */
@@ -4347,7 +4348,7 @@ public class LettuceConnection extends AbstractRedisConnection {
 			return outputType != null ? outputType : defaultType;
 		}
 
-		@SuppressWarnings({ "rawtypes", "unchecked" })
+		@SuppressWarnings({"rawtypes", "unchecked"})
 		private CommandOutput<?, ?, ?> instanciateCommandOutput(Class<? extends CommandOutput> type) {
 
 			Assert.notNull(type, "Cannot create instance for 'null' type.");
@@ -4587,4 +4588,73 @@ public class LettuceConnection extends AbstractRedisConnection {
 		}
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.data.redis.connection.RedisStringCommands#bitfield(byte[], BitfieldCommand)
+	 */
+	@Override
+	public List<Long> bitfield(byte[] key, BitfieldCommand command) {
+
+		Assert.notNull(key, "Key must not be null!");
+		Assert.notNull(command, "Command must not be null!");
+
+		BitFieldArgs args = new BitFieldArgs();
+
+		for (BitfieldSubCommand subCommand : command.getSubCommands()) {
+
+			BitFieldArgs.BitFieldType bft = subCommand.getType().isSigned() ? BitFieldArgs.signed(subCommand.getType().getBits())
+					: BitFieldArgs.unsigned(subCommand.getType().getBits());
+
+			// TODO: fix width based offsets when resolved https://github.com/mp911de/lettuce/issues/379
+			if (!subCommand.getOffset().isZeroBased()) {
+				throw new UnsupportedOperationException("Lettuce does not support '#' prefixed offset");
+			}
+
+			if (subCommand instanceof BitfieldGet) {
+				args = args.get(bft, subCommand.getOffset().getValue().intValue());
+			} else if (subCommand instanceof BitfieldSet) {
+				args = args.set(bft, subCommand.getOffset().getValue().intValue(), ((BitfieldSet) subCommand).getValue());
+			} else if (subCommand instanceof BitfieldIncrBy) {
+
+				BitfieldIncrBy.Overflow overflow = ((BitfieldIncrBy) subCommand).getOverflow();
+				if (overflow != null) {
+
+					BitFieldArgs.OverflowType type;
+
+					switch (overflow) {
+						case SAT:
+							type = BitFieldArgs.OverflowType.SAT;
+							break;
+						case FAIL:
+							type = BitFieldArgs.OverflowType.FAIL;
+							break;
+						case WRAP:
+							type = BitFieldArgs.OverflowType.WRAP;
+							break;
+						default:
+							throw new IllegalArgumentException(
+									String.format("o_O invalid OVERFLOW. Expected one the following %s but got %s.",
+											BitfieldIncrBy.Overflow.values(), overflow));
+					}
+					args = args.overflow(type);
+				}
+
+				args = args.incrBy(bft, subCommand.getOffset().getValue().intValue(), ((BitfieldIncrBy) subCommand).getValue());
+			}
+		}
+
+		try {
+			if (isPipelined()) {
+				pipeline(new LettuceResult(getAsyncConnection().bitfield(key, args)));
+				return null;
+			}
+			if (isQueueing()) {
+				transaction(new LettuceTxResult(getConnection().bitfield(key, args)));
+				return null;
+			}
+			return getConnection().bitfield(key, args);
+		} catch (Exception ex) {
+			throw convertLettuceAccessException(ex);
+		}
+	}
 }

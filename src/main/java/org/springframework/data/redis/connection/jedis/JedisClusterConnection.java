@@ -450,6 +450,7 @@ public class JedisClusterConnection implements RedisClusterConnection {
 			throw convertJedisAccessException(ex);
 		}
 	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see org.springframework.data.redis.connection.RedisKeyCommands#ttl(byte[], java.util.concurrent.TimeUnit)
@@ -3982,6 +3983,26 @@ public class JedisClusterConnection implements RedisClusterConnection {
 				return client.migrate(JedisConverters.toBytes(target.getHost()), target.getPort(), key, dbIndex, timeoutToUse);
 			}
 		}, node);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.data.redis.connection.RedisStringCommands#bitfield(byte[], BitfieldCommand)
+	 */
+	@Override
+	public List<Long> bitfield(byte[] key, BitfieldCommand command) {
+
+		Assert.notNull(key, "Key must not be null!");
+		Assert.notNull(command, "Command must not be null!");
+
+		try {
+
+			List untypedListToAvoidClassCastErrorsSinceThisOneDeclaresListOfByteArrayButReturnsListOfLong = cluster
+					.bitfield(key, JedisConverters.toBitfieldCommandArguments(command));
+			return (List<Long>) untypedListToAvoidClassCastErrorsSinceThisOneDeclaresListOfByteArrayButReturnsListOfLong;
+		} catch (Exception ex) {
+			throw convertJedisAccessException(ex);
+		}
 	}
 
 	/*

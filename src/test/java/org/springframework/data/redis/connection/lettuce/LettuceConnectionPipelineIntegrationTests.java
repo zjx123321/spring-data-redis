@@ -22,6 +22,7 @@ import static org.springframework.data.redis.SpinBarrier.*;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.dao.DataAccessException;
@@ -119,4 +120,23 @@ public class LettuceConnectionPipelineIntegrationTests extends AbstractConnectio
 		super.testListClientsContainsAtLeastOneElement();
 	}
 
+	/**
+	 * @see DATAREDIS-562
+	 */
+	@Test
+	@Ignore("Lettuce Bug")
+	@Override
+	public void bitFieldIncrByWithOverflowShouldWorkCorrectly() {
+		super.bitFieldIncrByWithOverflowShouldWorkCorrectly();
+	}
+
+	/**
+	 * @see DATAREDIS-562
+	 */
+	@Test
+	@Ignore("Lettuce Bug")
+	@Override
+	public void bitfieldShouldWorkUsingNonZeroBasedOffset() {
+		super.bitfieldShouldWorkUsingNonZeroBasedOffset();
+	}
 }

@@ -1640,4 +1640,13 @@ public class JredisConnection extends AbstractRedisConnection {
 	public void migrate(byte[] key, RedisNode target, int dbIndex, MigrateOption option, long timeout) {
 		throw new UnsupportedOperationException();
 	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.data.redis.connection.RedisStringCommands#bitfield(byte[], BitfieldCommand)
+	 */
+	@Override
+	public List<Long> bitfield(byte[] key, BitfieldCommand command) {
+		throw new UnsupportedOperationException();
+	}
 }

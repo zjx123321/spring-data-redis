@@ -4142,7 +4142,39 @@ public class JedisConnection extends AbstractRedisConnection {
 		} catch (Exception ex) {
 			throw convertJedisAccessException(ex);
 		}
-
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see org.springframework.data.redis.connection.RedisStringCommands#bitfield(byte[], BitfieldCommand)
+	 */
+	@Override
+	public List<Long> bitfield(byte[] key, BitfieldCommand command) {
+
+		Assert.notNull(key, "Key must not be null!");
+		Assert.notNull(command, "Command must not be null!");
+
+		byte[][] args = JedisConverters.toBitfieldCommandArguments(command);
+
+		try {
+			if (isPipelined()) {
+				pipeline(new JedisResult(pipeline.bitfield(key, args)));
+				return null;
+			}
+			if (isQueueing()) {
+				transaction(new JedisResult(transaction.bitfield(key, args)));
+				return null;
+			}
+		} catch (Exception ex) {
+			throw convertJedisAccessException(ex);
+		}
+
+		// TODO: fix type declaration once https://github.com/xetorthio/jedis/issues/1413 is resolved
+		// Jedis return type declaration is wrong. it indicates List<byte[]> but return List<Long> causing Class cast errors
+		// when trying to convert that stuff. So we hacked it here to make it work.
+
+		List untypedListToAvoidClassCastErrorsSinceThisOneDeclaresListOfByteArrayButReturnsListOfLong = jedis.bitfield(key,
+				args);
+		return (List<Long>) untypedListToAvoidClassCastErrorsSinceThisOneDeclaresListOfByteArrayButReturnsListOfLong;
+	}
 }

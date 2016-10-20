@@ -124,4 +124,25 @@ public class LettuceSentinelIntegrationTests extends AbstractConnectionIntegrati
 			connection.close();
 		}
 	}
+
+
+	/**
+	 * @see DATAREDIS-562
+	 */
+	@Test
+	@Ignore("Lettuce Bug")
+	@Override
+	public void bitFieldIncrByWithOverflowShouldWorkCorrectly() {
+		super.bitFieldIncrByWithOverflowShouldWorkCorrectly();
+	}
+
+	/**
+	 * @see DATAREDIS-562
+	 */
+	@Test
+	@Ignore("Lettuce Bug")
+	@Override
+	public void bitfieldShouldWorkUsingNonZeroBasedOffset() {
+		super.bitfieldShouldWorkUsingNonZeroBasedOffset();
+	}
 }
