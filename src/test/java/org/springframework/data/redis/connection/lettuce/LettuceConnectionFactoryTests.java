@@ -20,6 +20,7 @@ import static org.hamcrest.core.IsEqual.*;
 import static org.hamcrest.core.IsNull.*;
 import static org.junit.Assert.*;
 
+import io.lettuce.core.ReadFrom;
 import io.lettuce.core.RedisException;
 import io.lettuce.core.api.async.RedisAsyncCommands;
 import io.lettuce.core.api.reactive.BaseRedisReactiveCommands;
@@ -358,6 +359,28 @@ public class LettuceConnectionFactoryTests {
 		subsequent.close();
 
 		assertThat(initialNativeConnection, is(subsequentNativeConnection));
+
+		factory.destroy();
+	}
+
+	@Test // DATAREDIS-580
+	public void factoryUsesMasterSlaveConnections() {
+
+		LettuceClientConfiguration configuration = LettuceTestClientConfiguration.builder().readFrom(ReadFrom.SLAVE)
+				.build();
+
+		LettuceConnectionFactory factory = new LettuceConnectionFactory(SettingsUtils.standaloneConfiguration(),
+				configuration);
+		factory.afterPropertiesSet();
+
+		RedisConnection connection = factory.getConnection();
+
+		try {
+			assertThat(connection.ping(), is(equalTo("PONG")));
+			assertThat(connection.info().getProperty("role"), is(equalTo("slave")));
+		} finally {
+			this.connection.close();
+		}
 
 		factory.destroy();
 	}
