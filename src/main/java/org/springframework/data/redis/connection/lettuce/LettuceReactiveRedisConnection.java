@@ -166,6 +166,13 @@ class LettuceReactiveRedisConnection implements ReactiveRedisConnection {
 		return new LettuceReactiveHyperLogLogCommands(this);
 	}
 
+	@Override
+	public ReactiveRedisPubSubCommands pubSubCommands() {
+
+		// TODO: Implement me with DATAREDIS-612
+		return null;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see org.springframework.data.redis.connection.ReactiveRedisConnection#scriptingCommands()
