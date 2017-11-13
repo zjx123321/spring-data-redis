@@ -21,6 +21,8 @@ import reactor.core.publisher.Mono;
 import java.nio.ByteBuffer;
 
 import org.reactivestreams.Publisher;
+import org.springframework.data.redis.connection.ReactiveSubscription.ChannelMessage;
+import org.springframework.lang.Nullable;
 
 /**
  * Redis <a href="https://redis.io/commands/#pubsub">Pub/Sub</a> commands executed using reactive infrastructure.
@@ -31,11 +33,11 @@ import org.reactivestreams.Publisher;
 public interface ReactiveRedisPubSubCommands {
 
 	/**
-	 * Indicates whether the current connection is subscribed (to at least one channel) or not.
+	 * Creates a subscription for this connection.
 	 *
-	 * @return {@literal true} if the connection is subscribed, {@literal false} otherwise.
+	 * @return the subscription.
 	 */
-	boolean isSubscribed();
+	Mono<ReactiveSubscription> createSubscription();
 
 	/**
 	 * Publishes the given message to the given channel.
@@ -46,7 +48,7 @@ public interface ReactiveRedisPubSubCommands {
 	 * @see <a href="http://redis.io/commands/publish">Redis Documentation: PUBLISH</a>
 	 */
 	default Mono<Long> publish(ByteBuffer channel, ByteBuffer message) {
-		return publish(Mono.just(new ChannelMessage(channel, message))).next();
+		return publish(Mono.just(new ChannelMessage<>(channel, message))).next();
 	}
 
 	/**
@@ -56,7 +58,7 @@ public interface ReactiveRedisPubSubCommands {
 	 * @return the number of clients that received the message.
 	 * @see <a href="http://redis.io/commands/publish">Redis Documentation: PUBLISH</a>
 	 */
-	Flux<Long> publish(Publisher<ChannelMessage> messageStream);
+	Flux<Long> publish(Publisher<ChannelMessage<ByteBuffer, ByteBuffer>> messageStream);
 
 	/**
 	 * Subscribes the connection to the given {@code channels}. Once subscribed, a connection enters listening mode and
@@ -68,7 +70,7 @@ public interface ReactiveRedisPubSubCommands {
 	 * @param channels channel names, must not be {@literal null}.
 	 * @see <a href="http://redis.io/commands/subscribe">Redis Documentation: SUBSCRIBE</a>
 	 */
-	Flux<ChannelMessage> subscribe(ByteBuffer... channels);
+	Mono<Void> subscribe(ByteBuffer... channels);
 
 	/**
 	 * Subscribes the connection to all channels matching the given {@code patterns}. Once subscribed, a connection enters
@@ -80,38 +82,5 @@ public interface ReactiveRedisPubSubCommands {
 	 * @param patterns channel name patterns, must not be {@literal null}.
 	 * @see <a href="http://redis.io/commands/psubscribe">Redis Documentation: PSUBSCRIBE</a>
 	 */
-	Flux<PatternMessage> pSubscribe(ByteBuffer... patterns);
-
-	class ChannelMessage {
-
-		private final ByteBuffer channel;
-		private final ByteBuffer body;
-
-		public ChannelMessage(ByteBuffer channel, ByteBuffer body) {
-			this.channel = channel;
-			this.body = body;
-		}
-
-		public ByteBuffer getChannel() {
-			return channel;
-		}
-
-		public ByteBuffer getBody() {
-			return body;
-		}
-	}
-
-	class PatternMessage extends ChannelMessage {
-
-		private final ByteBuffer pattern;
-
-		public PatternMessage(ByteBuffer pattern, ByteBuffer channel, ByteBuffer body) {
-			super(channel, body);
-			this.pattern = pattern;
-		}
-
-		public ByteBuffer getPattern() {
-			return pattern;
-		}
-	}
+	Mono<Void> pSubscribe(ByteBuffer... patterns);
 }

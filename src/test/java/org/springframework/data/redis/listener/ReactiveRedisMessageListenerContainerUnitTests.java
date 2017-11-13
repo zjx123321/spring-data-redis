@@ -17,9 +17,11 @@ package org.springframework.data.redis.listener;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import static org.springframework.data.redis.util.ByteUtils.*;
 
 import reactor.core.publisher.DirectProcessor;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.test.StepVerifier;
 
 import java.nio.ByteBuffer;
@@ -33,10 +35,13 @@ import org.mockito.junit.MockitoJUnitRunner;
 import org.springframework.data.redis.connection.ReactiveRedisConnection;
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory;
 import org.springframework.data.redis.connection.ReactiveRedisPubSubCommands;
-import org.springframework.data.redis.connection.ReactiveRedisPubSubCommands.ChannelMessage;
-import org.springframework.data.redis.connection.ReactiveRedisPubSubCommands.PatternMessage;
+import org.springframework.data.redis.connection.ReactiveSubscription;
+import org.springframework.data.redis.connection.ReactiveSubscription.ChannelMessage;
+import org.springframework.data.redis.connection.ReactiveSubscription.PatternMessage;
 
 /**
+ * Unit tests for {@link ReactiveRedisMessageListenerContainer}.
+ *
  * @author Mark Paluch
  */
 @RunWith(MockitoJUnitRunner.class)
@@ -44,93 +49,101 @@ public class ReactiveRedisMessageListenerContainerUnitTests {
 
 	ReactiveRedisMessageListenerContainer container;
 
-	@Mock ReactiveRedisConnectionFactory connectionFactory;
-	@Mock ReactiveRedisConnection connection;
-	@Mock ReactiveRedisPubSubCommands commands;
+	@Mock ReactiveRedisConnectionFactory connectionFactoryMock;
+	@Mock ReactiveRedisConnection connectionMock;
+	@Mock ReactiveRedisPubSubCommands commandsMock;
+	@Mock ReactiveSubscription subscriptionMock;
 
 	@Before
 	public void before() {
 
-		when(connectionFactory.getReactiveConnection()).thenReturn(connection);
-		when(connection.pubSubCommands()).thenReturn(commands);
+		when(connectionFactoryMock.getReactiveConnection()).thenReturn(connectionMock);
+		when(connectionMock.pubSubCommands()).thenReturn(commandsMock);
+		when(commandsMock.createSubscription()).thenReturn(Mono.just(subscriptionMock));
+		when(subscriptionMock.subscribe(any())).thenReturn(Mono.empty());
+		when(subscriptionMock.pSubscribe(any())).thenReturn(Mono.empty());
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldSubscribeToPattern() {
 
+		when(subscriptionMock.receive()).thenReturn(Flux.never());
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.pSubscribe(any(ByteBuffer.class))).thenReturn(Flux.empty());
 
-		container.subscribe(new PatternTopic("foo*"));
+		StepVerifier.create(container.receive(new PatternTopic("foo*"))).thenAwait().thenCancel().verify();
 
-		verify(commands).pSubscribe(byteBuffer("foo*"));
+		verify(subscriptionMock).pSubscribe(getByteBuffer("foo*"));
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldSubscribeToMultiplePatterns() {
 
+		when(subscriptionMock.receive()).thenReturn(Flux.never());
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.pSubscribe(any(ByteBuffer.class))).thenReturn(Flux.empty());
 
-		container.subscribe(new PatternTopic("foo*"), new PatternTopic("bar*"));
+		StepVerifier.create(container.receive(new PatternTopic("foo*"), new PatternTopic("bar*"))).thenRequest(1)
+				.thenAwait().thenCancel().verify();
 
-		verify(commands).pSubscribe(byteBuffer("foo*"));
-		verify(commands).pSubscribe(byteBuffer("bar*"));
+		verify(subscriptionMock).pSubscribe(getByteBuffer("foo*"), getByteBuffer("bar*"));
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldSubscribeToChannel() {
 
+		when(subscriptionMock.receive()).thenReturn(Flux.never());
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.subscribe(any(ByteBuffer.class))).thenReturn(Flux.empty());
 
-		container.subscribe(new ChannelTopic("foo"));
+		StepVerifier.create(container.receive(new ChannelTopic("foo"))).thenAwait().thenCancel().verify();
 
-		verify(commands).subscribe(byteBuffer("foo"));
+		verify(subscriptionMock).subscribe(getByteBuffer("foo"));
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldSubscribeToMultipleChannels() {
 
+		when(subscriptionMock.receive()).thenReturn(Flux.never());
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.subscribe(any(ByteBuffer.class))).thenReturn(Flux.empty());
 
-		container.subscribe(new ChannelTopic("foo"), new ChannelTopic("bar"));
+		StepVerifier.create(container.receive(new ChannelTopic("foo"), new ChannelTopic("bar"))).thenAwait().thenCancel()
+				.verify();
 
-		verify(commands).subscribe(byteBuffer("foo"));
-		verify(commands).subscribe(byteBuffer("bar"));
+		verify(subscriptionMock).subscribe(getByteBuffer("foo"), getByteBuffer("bar"));
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldEmitChannelMessage() {
 
-		DirectProcessor<ChannelMessage> processor = DirectProcessor.create();
+		DirectProcessor<ChannelMessage<ByteBuffer, ByteBuffer>> processor = DirectProcessor.create();
 
+		when(subscriptionMock.receive()).thenReturn(processor);
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.subscribe(any(ByteBuffer.class))).thenReturn(processor);
 
-		Flux<ReactiveRedisMessageListenerContainer.ChannelMessage<String, String>> messageStream = container
-				.subscribe(new ChannelTopic("foo"));
+		Flux<ChannelMessage<String, String>> messageStream = container.receive(new ChannelTopic("foo"));
 
 		StepVerifier.create(messageStream).then(() -> {
 			processor.onNext(createChannelMessage("foo", "message"));
 		}).assertNext(msg -> {
 
 			assertThat(msg.getChannel()).isEqualTo("foo");
-			assertThat(msg.getBody()).isEqualTo("message");
+			assertThat(msg.getMessage()).isEqualTo("message");
 		}).thenCancel().verify();
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldEmitPatternMessage() {
 
-		DirectProcessor<PatternMessage> processor = DirectProcessor.create();
+		DirectProcessor<ChannelMessage<ByteBuffer, ByteBuffer>> processor = DirectProcessor.create();
 
+		when(subscriptionMock.receive()).thenReturn(processor);
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.pSubscribe(any(ByteBuffer.class))).thenReturn(processor);
 
-		Flux<ReactiveRedisMessageListenerContainer.PatternMessage<String, String>> messageStream = container
-				.subscribe(new PatternTopic("foo*"));
+		Flux<PatternMessage<String, String, String>> messageStream = container.receive(new PatternTopic("foo*"));
 
 		StepVerifier.create(messageStream).then(() -> {
 			processor.onNext(createPatternMessage("foo*", "foo", "message"));
@@ -138,20 +151,42 @@ public class ReactiveRedisMessageListenerContainerUnitTests {
 
 			assertThat(msg.getPattern()).isEqualTo("foo*");
 			assertThat(msg.getChannel()).isEqualTo("foo");
-			assertThat(msg.getBody()).isEqualTo("message");
+			assertThat(msg.getMessage()).isEqualTo("message");
 		}).thenCancel().verify();
+	}
+
+	@Test // DATAREDIS-612
+	public void shouldUnsubscribeOnCancel() {
+
+		when(subscriptionMock.receive()).thenReturn(DirectProcessor.create());
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
+		container = createContainer();
+
+		Flux<PatternMessage<String, String, String>> messageStream = container.receive(new PatternTopic("foo*"));
+
+		StepVerifier.create(messageStream).then(() -> {
+
+			// Then required to trigger cancel.
+
+		}).thenCancel().verify();
+
+		verify(subscriptionMock).terminate();
 	}
 
 	@Test // DATAREDIS-612
 	public void shouldTerminateSubscriptionsOnShutdown() {
 
-		DirectProcessor<PatternMessage> processor = DirectProcessor.create();
+		DirectProcessor<ChannelMessage<ByteBuffer, ByteBuffer>> processor = DirectProcessor.create();
 
+		when(subscriptionMock.receive()).thenReturn(processor);
+		when(subscriptionMock.terminate()).thenReturn(Mono.defer(() -> {
+
+			processor.onError(new CancellationException());
+			return Mono.empty();
+		}));
 		container = createContainer();
-		when(commands.pSubscribe(any(ByteBuffer.class))).thenReturn(processor);
 
-		Flux<ReactiveRedisMessageListenerContainer.PatternMessage<String, String>> messageStream = container
-				.subscribe(new PatternTopic("foo*"));
+		Flux<PatternMessage<String, String, String>> messageStream = container.receive(new PatternTopic("foo*"));
 
 		StepVerifier.create(messageStream).then(() -> {
 			container.destroy();
@@ -161,13 +196,13 @@ public class ReactiveRedisMessageListenerContainerUnitTests {
 	@Test // DATAREDIS-612
 	public void shouldCleanupDownstream() {
 
-		DirectProcessor<PatternMessage> processor = DirectProcessor.create();
+		DirectProcessor<ChannelMessage<ByteBuffer, ByteBuffer>> processor = DirectProcessor.create();
 
+		when(subscriptionMock.receive()).thenReturn(processor);
+		when(subscriptionMock.terminate()).thenReturn(Mono.empty());
 		container = createContainer();
-		when(commands.pSubscribe(any(ByteBuffer.class))).thenReturn(processor);
 
-		Flux<ReactiveRedisMessageListenerContainer.PatternMessage<String, String>> messageStream = container
-				.subscribe(new PatternTopic("foo*"));
+		Flux<PatternMessage<String, String, String>> messageStream = container.receive(new PatternTopic("foo*"));
 
 		StepVerifier.create(messageStream).then(() -> {
 			assertThat(processor.hasDownstreams()).isTrue();
@@ -178,19 +213,15 @@ public class ReactiveRedisMessageListenerContainerUnitTests {
 	}
 
 	private ReactiveRedisMessageListenerContainer createContainer() {
-		return new ReactiveRedisMessageListenerContainer(connectionFactory);
+		return new ReactiveRedisMessageListenerContainer(connectionFactoryMock);
 	}
 
-	private static ByteBuffer byteBuffer(String content) {
-		return ByteBuffer.wrap(content.getBytes());
+	private static ChannelMessage<ByteBuffer, ByteBuffer> createChannelMessage(String channel, String body) {
+		return new ChannelMessage<>(getByteBuffer(channel), getByteBuffer(body));
 	}
 
-	private static ChannelMessage createChannelMessage(String channel, String body) {
-		return new ChannelMessage(byteBuffer(channel), byteBuffer(body));
+	private static PatternMessage<ByteBuffer, ByteBuffer, ByteBuffer> createPatternMessage(String pattern, String channel,
+			String body) {
+		return new PatternMessage<>(getByteBuffer(pattern), getByteBuffer(channel), getByteBuffer(body));
 	}
-
-	private static PatternMessage createPatternMessage(String pattern, String channel, String body) {
-		return new PatternMessage(byteBuffer(pattern), byteBuffer(channel), byteBuffer(body));
-	}
-
 }
